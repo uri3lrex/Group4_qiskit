@@ -79,6 +79,21 @@ def run_one_hop(params, sim_time_ms, seed) -> dict:
     DeliveredPair-equivalent record (or count pairs via state.stats and
     track fidelities in a list).
     """
+    # read link and network state, build simulator, run, summarise, return dict
+    links = make_links(params, which="one_hop")
+    simulator = Simulator(links=links, t2=params['physics']['t2_ms'], q_swap=params['physics']['q_swap'], f_swap=params['physics']['f_swap'],
+                          purification_allowed=params['physics']['purification_allowed'], seed=seed)
+    simulator.run(sim_time_ms)
+    network_state = simulator.state
+    delivered_pairs = []
+    for link_id, pairs in network_state.pairs.items():
+        for pair in pairs:
+            delivered_pairs.append(pair)
+
+    # calculate rate and mean fidelity
+    rate = network_state.stats["generated"] / (sim_time_ms / 1000.0)  # convert ms to seconds
+    mean_fidelity = sum(pair.f0 for pair in delivered_pairs) / len(delivered_pairs) if delivered_pairs else 0.0
+    return {"rate": rate, "mean_fidelity": mean_fidelity}   
     raise NotImplementedError("TODO: implement run_one_hop")
 
 
@@ -91,6 +106,8 @@ def run_two_hop(params, sim_time_ms, seed) -> dict:
     q_swap=1.0, f_swap=params['physics']['f_swap']; use a policy that swaps
     as soon as both links hold a pair; summarise with qnetsim.summarise.
     """
+
+    
     raise NotImplementedError("TODO: implement run_two_hop")
 
 
