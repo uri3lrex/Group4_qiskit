@@ -7,11 +7,13 @@ entry points. Signatures are normative; the autograder imports them.
 Only numpy + standard library + qnetsim may be used.
 """
 
+from email import policy
 import math
 
 import numpy as np
 
 from qnetsim import Link, Simulator, summarise
+from policy import BaselinePolicy
 
 
 # ---------------------------------------------------------------- helpers
@@ -107,7 +109,24 @@ def run_two_hop(params, sim_time_ms, seed) -> dict:
     as soon as both links hold a pair; summarise with qnetsim.summarise.
     """
 
-    
+    links = make_links(params, which="two_hop")
+    simulator = Simulator(links=links, t2=math.inf, q_swap=1.0, f_swap=params['physics']['f_swap'],
+                          purification_allowed=params['physics']['purification_allowed'], seed=seed)
+
+    policy = BaselinePolicy(params)
+    simulator.run(sim_time_ms, policy=policy)
+
+    print("Generated:", simulator.state.stats["generated"])
+    print("Delivered:", len(simulator.delivered))
+    print("Remaining pairs:", {
+        link_id: len(pairs)
+        for link_id, pairs in simulator.state.pairs.items()
+    })
+
+    # calculate rate and mean fidelity
+    results = summarise(simulator.delivered, sim_time_ms)
+    return {"rate": results['rate'], "mean_fidelity": results['mean_fidelity']}
+
     raise NotImplementedError("TODO: implement run_two_hop")
 
 
