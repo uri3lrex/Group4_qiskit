@@ -13,7 +13,7 @@ import math
 import numpy as np
 
 from qnetsim import Link, Simulator, summarise
-from policy import BaselinePolicy
+from policy import BaselinePolicy, make_policy
 
 
 # ---------------------------------------------------------------- helpers
@@ -147,48 +147,92 @@ def run_variant_scenario(params, sim_time_ms, seed, policy) -> dict:
         stats['generated'] / max(1, delivered).
     """
 
-    links = make_links(params, which="variant")
-    simulator = Simulator(links=links, t2=params['physics']['t2_ms'], q_swap=params['physics']['q_swap'], f_swap=params['physics']['f_swap'],
-                          purification_allowed=params['physics']['purification_allowed'], seed=seed)
+    # setting up the simulator with the variant topology and physics parameters
 
+    from collections import deque
+
+    # 1. Initialize queues and tracking lists
+    waiting_requests = deque()
+    end_to_end_buffer = deque()
+    served_fidelities = []
+    latencies = []
+
+    # create simsulator with variant links and physics parameters
+
+    links = make_links(params, which="variant")
+    simulator = Simulator(
+        links=links,
+        t2=params["physics"]["t2_ms"],
+        q_swap=params["physics"]["q_swap"],
+        f_swap=params["physics"]["f_swap"],
+        purification_allowed=params["physics"]["purification_allowed"],
+        seed=seed
+    )
+
+    # handle request arrivals: either serve immediately from buffer or queue for later
+    def on_request_arrival(request_id):
+        arrival_time = simulator.state.now
+        if end_to_end_buffer:
+            # consume a pair from the buffer
+            fidelity = end_to_end_buffer.popleft()
+            served_fidelities.append(fidelity)
+            latencies.append(0)  # Zero latency for immediate delivery
+        else:
+            # No available pairs, queue the request
+            waiting_requests.append((request_id, arrival_time))
+
+    # wrap policy to track delivered pairs and handle waiting requests
+
+    class RequestAwarePolicy:
+
+        def __init__(self, inner_policy):
+            self.inner_policy = inner_policy
+
+        def on_pair_ready(self, link, pair, state, sim):
+
+            # Number of successful swaps before running the policy
+            before = len(sim.delivered)
+            self.inner_policy.on_pair_ready(link, pair, state, sim)
+            new_pairs = sim.delivered[before:]
+
+            for delivered_pair in new_pairs:
+                if waiting_requests:
+                    # Serve the oldest waiting request
+                    request_id, arrival_time = waiting_requests.popleft()
+
+                    served_fidelities.append(delivered_pair.fidelity)
+                    latencies.append(state.now - arrival_time)
+
+                else:
+                    # Store the pair until a request arrives
+                    end_to_end_buffer.append(delivered_pair.fidelity)
     # generate request times and run the simulator
     request_arrivals = request_times(params, sim_time_ms, seed)
-
-    def on_request_arrival(request_id):
-        # Check if there are any available pairs in the buffer
-        available_pairs = []
-        for link_id, pairs in simulator.state.pairs.items():
-            available_pairs.extend(pairs)
-
-        if available_pairs:
-            # Consume a pair from the buffer
-            pair = available_pairs.pop(0)
-            simulator.state.pairs[pair.link_id].remove(pair)
-            simulator.delivered.append(pair)
-        else:
-            # No available pairs, request is queued (not delivered)
-            pass  
 
     for request_id, arrival_time in enumerate(request_arrivals):
         simulator.eq.push(
             arrival_time,
             on_request_arrival,
             request_id
+        )
+
+    # Use the RequestAwarePolicy to wrap the provided policy
+    if policy is None:
+        policy = make_policy(params)
+    wrapped_policy = RequestAwarePolicy(policy)
+
+
+    simulator.run(
+        sim_time_ms,
+        policy=wrapped_policy
     )
 
-    simulator.run(sim_time_ms, policy=policy)
-
-    delivered_pairs = []
-    eventqueue = simulator.eq
-    for t, _, cb, payload in eventqueue:
-        if t <= sim_time_ms and cb == on_request_arrival:
-            delivered_pairs.append(payload)
-
     # calculate rate, mean fidelity, p95 latency, pairs consumed per delivery
-    rate = simulator.state.stats["generated"] / (sim_time_ms / 1000.0)  # convert ms to seconds
-    mean_fidelity = sum(pair.f0 for pair in delivered_pairs) / len(delivered_pairs) if delivered_pairs else 0.0
-    p95_latency = np.percentile([pair.latency for pair in delivered_pairs], 95) if delivered_pairs else 0.0
-    pairs_consumed_per_delivery = simulator.state.stats["generated"] / max(1, len(delivered_pairs)) if delivered_pairs else 0.0
+    delivered_count = len(served_fidelities)
+    rate = delivered_count / (sim_time_ms / 1000.0)
+    mean_fidelity = (float(np.mean(served_fidelities)) if served_fidelities else 0.0)
+    p95_latency = (float(np.percentile(latencies, 95))if latencies else 0.0)
+    pairs_consumed_per_delivery = (simulator.state.stats["generated"] / max(1, delivered_count))
 
     return {
         "rate": rate,
