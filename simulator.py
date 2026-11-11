@@ -116,12 +116,12 @@ def run_two_hop(params, sim_time_ms, seed) -> dict:
     policy = BaselinePolicy(params)
     simulator.run(sim_time_ms, policy=policy)
 
-    print("Generated:", simulator.state.stats["generated"])
-    print("Delivered:", len(simulator.delivered))
-    print("Remaining pairs:", {
-        link_id: len(pairs)
-        for link_id, pairs in simulator.state.pairs.items()
-    })
+    #print("Generated:", simulator.state.stats["generated"])
+    #print("Delivered:", len(simulator.delivered))
+    #print("Remaining pairs:", {
+    #    link_id: len(pairs)
+    #    for link_id, pairs in simulator.state.pairs.items()
+    #})
 
     # calculate rate and mean fidelity
     results = summarise(simulator.delivered, sim_time_ms)
@@ -146,4 +146,55 @@ def run_variant_scenario(params, sim_time_ms, seed, policy) -> dict:
       * return the four metrics. pairs_consumed_per_delivery =
         stats['generated'] / max(1, delivered).
     """
+
+    links = make_links(params, which="variant")
+    simulator = Simulator(links=links, t2=params['physics']['t2_ms'], q_swap=params['physics']['q_swap'], f_swap=params['physics']['f_swap'],
+                          purification_allowed=params['physics']['purification_allowed'], seed=seed)
+
+    # generate request times and run the simulator
+    request_arrivals = request_times(params, sim_time_ms, seed)
+
+    def on_request_arrival(request_id):
+        # Check if there are any available pairs in the buffer
+        available_pairs = []
+        for link_id, pairs in simulator.state.pairs.items():
+            available_pairs.extend(pairs)
+
+        if available_pairs:
+            # Consume a pair from the buffer
+            pair = available_pairs.pop(0)
+            simulator.state.pairs[pair.link_id].remove(pair)
+            simulator.delivered.append(pair)
+        else:
+            # No available pairs, request is queued (not delivered)
+            pass  
+
+    for request_id, arrival_time in enumerate(request_arrivals):
+        simulator.eq.push(
+            arrival_time,
+            on_request_arrival,
+            request_id
+    )
+
+    simulator.run(sim_time_ms, policy=policy)
+
+    delivered_pairs = []
+    eventqueue = simulator.eq
+    for t, _, cb, payload in eventqueue:
+        if t <= sim_time_ms and cb == on_request_arrival:
+            delivered_pairs.append(payload)
+
+    # calculate rate, mean fidelity, p95 latency, pairs consumed per delivery
+    rate = simulator.state.stats["generated"] / (sim_time_ms / 1000.0)  # convert ms to seconds
+    mean_fidelity = sum(pair.f0 for pair in delivered_pairs) / len(delivered_pairs) if delivered_pairs else 0.0
+    p95_latency = np.percentile([pair.latency for pair in delivered_pairs], 95) if delivered_pairs else 0.0
+    pairs_consumed_per_delivery = simulator.state.stats["generated"] / max(1, len(delivered_pairs)) if delivered_pairs else 0.0
+
+    return {
+        "rate": rate,
+        "mean_fidelity": mean_fidelity,
+        "p95_latency_ms": p95_latency,
+        "pairs_consumed_per_delivery": pairs_consumed_per_delivery
+    }
+
     raise NotImplementedError("TODO: implement run_variant_scenario")
