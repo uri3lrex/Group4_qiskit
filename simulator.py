@@ -152,7 +152,7 @@ def run_variant_scenario(params, sim_time_ms, seed, policy) -> dict:
     from collections import deque
 
     # 1. Initialize queues and tracking lists
-    waiting_requests = deque()
+    unserved_request = deque()
     end_to_end_buffer = deque()
     served_fidelities = []
     latencies = []
@@ -179,7 +179,7 @@ def run_variant_scenario(params, sim_time_ms, seed, policy) -> dict:
             latencies.append(0)  # Zero latency for immediate delivery
         else:
             # No available pairs, queue the request
-            waiting_requests.append((request_id, arrival_time))
+            unserved_request.append((request_id, arrival_time))
 
     # wrap policy to track delivered pairs and handle waiting requests
 
@@ -196,9 +196,9 @@ def run_variant_scenario(params, sim_time_ms, seed, policy) -> dict:
             new_pairs = sim.delivered[before:]
 
             for delivered_pair in new_pairs:
-                if waiting_requests:
+                if unserved_request:
                     # Serve the oldest waiting request
-                    request_id, arrival_time = waiting_requests.popleft()
+                    request_id, arrival_time = unserved_request.popleft()
 
                     served_fidelities.append(delivered_pair.fidelity)
                     latencies.append(state.now - arrival_time)

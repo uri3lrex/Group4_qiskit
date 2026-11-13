@@ -209,8 +209,8 @@ gantt
 
 ## 6. Checkpoints and definition of done
 
-- [ ] **6 Nov:** both reference runners match 98.313 /s and 0.7404; roles and repo settled.
-- [ ] **13 Nov (week 9 checkpoint):** full simulator reproduces the baseline calibration numbers and passes determinism tests; a first policy beats the baseline.
+- [x] **6 Nov:** both reference runners match 98.313 /s and 0.7404; roles and repo settled.
+- [x] **13 Nov (week 9 checkpoint):** full simulator reproduces the baseline calibration numbers and passes determinism tests; a first policy beats the baseline.
 - [ ] **17 Nov (code freeze):** policy meets rate, fidelity and p95 SLOs on seed 1004 **and** on held-out seeds 7012 to 7014; sweep JSON generated.
 - [ ] **21 Nov:** dry-run zip passes; PDF under 8 pages; video recorded with all four members; AI use declared in file headers.
 - [ ] Peer contribution forms completed after submission.
