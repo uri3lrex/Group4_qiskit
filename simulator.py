@@ -6,8 +6,6 @@ entry points. Signatures are normative; the autograder imports them.
 
 Only numpy + standard library + qnetsim may be used.
 """
-
-from email import policy
 import math
 
 import numpy as np
@@ -96,7 +94,6 @@ def run_one_hop(params, sim_time_ms, seed) -> dict:
     rate = network_state.stats["generated"] / (sim_time_ms / 1000.0)  # convert ms to seconds
     mean_fidelity = sum(pair.f0 for pair in delivered_pairs) / len(delivered_pairs) if delivered_pairs else 0.0
     return {"rate": rate, "mean_fidelity": mean_fidelity}   
-    raise NotImplementedError("TODO: implement run_one_hop")
 
 
 def run_two_hop(params, sim_time_ms, seed) -> dict:
@@ -126,8 +123,6 @@ def run_two_hop(params, sim_time_ms, seed) -> dict:
     # calculate rate and mean fidelity
     results = summarise(simulator.delivered, sim_time_ms)
     return {"rate": results['rate'], "mean_fidelity": results['mean_fidelity']}
-
-    raise NotImplementedError("TODO: implement run_two_hop")
 
 
 def run_variant_scenario(params, sim_time_ms, seed, policy) -> dict:
@@ -240,5 +235,3 @@ def run_variant_scenario(params, sim_time_ms, seed, policy) -> dict:
         "p95_latency_ms": p95_latency,
         "pairs_consumed_per_delivery": pairs_consumed_per_delivery
     }
-
-    raise NotImplementedError("TODO: implement run_variant_scenario")
