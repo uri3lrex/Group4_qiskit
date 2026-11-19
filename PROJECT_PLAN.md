@@ -43,7 +43,7 @@ Zip with the three files at the **zip root**. Unlimited resubmissions, last one 
 - Group work within the group only; code similarity is screened across groups.
 - **Declare AI-assistant use in file headers.**
 - Check that `group` in `variant_params.json` is set to our group number (it currently reads `"4"`).
-- Team decision: **we write all code ourselves.**
+- Team decision: **AI-assistance was used in some instances**
 
 ---
 
@@ -135,10 +135,10 @@ Held-out reference runs give rates of 72.4, 74.1 and 73.4 /s and fidelity of abo
 
 | Role | Team member | Owns |
 |---|---|---|
-| A — Simulator lead | _TBD_ | Runners, request buffer, latency metric, packaging |
-| B — Policy lead | _TBD_ | Policy prototype, tuning, robustness |
-| C — Validation & experiments lead | _TBD_ | Analytic checks, determinism tests, T2 sweep, statistics |
-| D — Report lead | _TBD_ | PDF report, video script, classical-networking section |
+| A — Simulator lead | Hera | Runners, request buffer, latency metric, packaging |
+| B — Policy lead | Xingnuo | Policy prototype, tuning, robustness |
+| C — Validation & experiments lead | Nicholas & Shraddha | Analytic checks, determinism tests, T2 sweep, statistics |
+| D — Report lead | All of us | PDF report, video script, classical-networking section |
 
 **Cross-review rule:** every file is reviewed by someone who did not write it, and all four of us must be able to explain the whole system on camera.
 
@@ -167,9 +167,9 @@ gantt
     T2 sweep, CI, JSON, plots                  :2026-11-11, 5d
 
     section Policy (B)
-    Policy prototype                           :2026-11-02, 8d
-    Policy tuning against SLOs                 :2026-11-09, 8d
-    Held-out seed checks (B+C)                 :2026-11-14, 4d
+    Policy prototype                           :2026-11-18, 8d
+    Policy tuning against SLOs                 :2026-11-18, 8d
+    Held-out seed checks (B+C)                 :2026-11-18, 4d
 
     section Report and video (D, All)
     Report: model and validation               :2026-11-05, 8d
@@ -211,8 +211,10 @@ gantt
 
 - [x] **6 Nov:** both reference runners match 98.313 /s and 0.7404; roles and repo settled.
 - [x] **13 Nov (week 9 checkpoint):** full simulator reproduces the baseline calibration numbers and passes determinism tests; a first policy beats the baseline.
-- [ ] **17 Nov (code freeze):** policy meets rate, fidelity and p95 SLOs on seed 1004 **and** on held-out seeds 7012 to 7014; sweep JSON generated.
-- [ ] **21 Nov:** dry-run zip passes; PDF under 8 pages; video recorded with all four members; AI use declared in file headers.
+- [x] **17 Nov (code freeze):** policy meets rate, fidelity and p95 SLOs on seed 1004 **and** on held-out seeds 7012 to 7014; sweep JSON generated.
+- [ ] **21 Nov:** 
+- [ ] **25 Nov:** dry-run zip passes- DEMO
+- [ ] PDF under 8 pages; video recorded with all four members; AI use declared in file headers.
 - [ ] Peer contribution forms completed after submission.
 
 ---
