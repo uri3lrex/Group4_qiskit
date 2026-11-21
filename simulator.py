@@ -118,7 +118,7 @@ def run_two_hop(params, sim_time_ms, seed) -> dict:
     #print("Remaining pairs:", {
     #    link_id: len(pairs)
     #    for link_id, pairs in simulator.state.pairs.items()
-    #})
+    #}) debugging statement
 
     # calculate rate and mean fidelity
     results = summarise(simulator.delivered, sim_time_ms)
@@ -228,6 +228,8 @@ def run_variant_scenario(params, sim_time_ms, seed, policy) -> dict:
     mean_fidelity = (float(np.mean(served_fidelities)) if served_fidelities else 0.0)
     p95_latency = (float(np.percentile(latencies, 95))if latencies else 0.0)
     pairs_consumed_per_delivery = (simulator.state.stats["generated"] / max(1, delivered_count))
+
+    #print(    f"Requests served: {len(served_fidelities)} | "    f"Requests waiting: {len(unserved_request)} | "    f"Buffered pairs: {len(end_to_end_buffer)}")
 
     return {
         "rate": rate,
