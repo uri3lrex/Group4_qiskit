@@ -203,4 +203,11 @@ if __name__ == "__main__":
     # Additional policy comparison
     print("\n--- POLICY COMPARISON ---")
     comparison = compare_policies(params, seeds)
-
+    rate_passes= [x["rate"]>57.5 for x in comparison if x["policy"] == "Fidelity"]
+    fidelity_passes = [x["fidelity_pass"] for x in comparison if x["policy"] == "Fidelity"]
+    latency_passes = [x["latency_pass"] for x in comparison if x["policy"] == "Fidelity"]
+    slo_passes = [x["all_slo_pass"] for x in comparison if x["policy"] == "Fidelity"]
+    print(f"Rate passes: {rate_passes.count(True)}/{len(rate_passes)}")
+    print(f"Fidelity passes: {fidelity_passes.count(True)}/{len(fidelity_passes)}")
+    print(f"Latency passes: {latency_passes.count(True)}/{len(latency_passes)}")
+    print(f"SLO passes: {slo_passes.count(True)}/{len(slo_passes)}")
