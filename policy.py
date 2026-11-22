@@ -30,19 +30,30 @@ class BaselinePolicy:
 
 class FidelityPolicy(BaselinePolicy):
     def on_pair_ready(self, link, pair, state, sim):
-        target_fidelity = self.params["slo"]["min_fidelity"]
+        target_fidelity = self.params["slo"]["min_fidelity"] + 0.04 # aim slightly above the SLO
+
+        # estimate how many end-to-end pairs have been delivered beyond the expected number of requests
+        request_rate = self.params["workload"]["arrival_rate_per_s"] / 1000.0 # requests per ms
+        expected_requests = request_rate * state.now
+        delivered_ahead = len(sim.delivered) - expected_requests
+
+        # purification consumes pairs and slows delivery, so only purify for fidelity when enough pairs
+        # are delivered ahead of the requests (the margin grows with the random variation in requests)
+        margin = 10.0 + 2.0 * math.sqrt(expected_requests)
+        quality = delivered_ahead >= margin
+
         for link_id in state.pairs:
             inventory = state.pairs[link_id] # pairs on link_id
             index = 0
 
             # Filter pairs where the value of current_fidelity is greater than 0.5
-            while index < len(inventory):
+            while quality and index < len(inventory):
                 if state.current_fidelity(inventory[index]) <= 0.5: # a pair that does not meet the final fidelity target may still be useful for purification
                     sim.discard(link_id, index)
                 else:
                     index += 1
 
-            if state.purification_allowed:
+            if quality and state.purification_allowed:
                 while len(inventory) >= 3: # Purification may produce one improved pair if successful, or lose both input pairs if unsuccessful.
                                            # Having a third pair provides a backup.
                                            
@@ -91,7 +102,7 @@ class FidelityPolicy(BaselinePolicy):
                 estimated_fidelity = left_fidelity * right_fidelity * state.f_swap
                 purification_link = None
                 best_gain = 0.0
-                if state.purification_allowed and estimated_fidelity < target_fidelity:
+                if quality and state.purification_allowed and estimated_fidelity < target_fidelity:
 
                     # test and decide which link to purify
                     for link_id in (left, right):
@@ -117,6 +128,48 @@ class FidelityPolicy(BaselinePolicy):
                 else:
                     sim.swap(left, right, left_index=left_index,
                              right_index=right_index)
+
+            if quality or not state.purification_allowed:
+                continue
+
+            # do not purify if the requests are already waiting for pairs
+            if len(sim.delivered) - expected_requests < 0:
+                continue
+
+            # the slower link limits the delivery rate, so only purify pairs on the faster link
+            links = self.params["topology"]["links"]
+            left_rate = links[left]["attempt_rate"] * links[left]["p_success"]
+            right_rate = links[right]["attempt_rate"] * links[right]["p_success"]
+            if left_rate <= right_rate:
+                slow_link = left
+                fast_link = right
+            else:
+                slow_link = right
+                fast_link = left
+
+            # a pair on the slower link is waiting for a partner, so keep the faster link's pairs
+            if state.pairs.get(slow_link):
+                continue
+
+            inventory = state.pairs.get(fast_link, [])
+            while len(inventory) >= 2:
+
+                # sim.purify uses the first two pairs
+                first_fidelity = state.current_fidelity(inventory[0])
+                second_fidelity = state.current_fidelity(inventory[1])
+                input_fidelity = min(first_fidelity, second_fidelity)
+                purified_fidelity, success_probability = bbpssw(input_fidelity)
+                improves = purified_fidelity > max(first_fidelity, second_fidelity)
+
+                if improves and len(inventory) >= 3: # keep a third pair as a backup in case purification fails
+                    sim.purify(fast_link)
+                elif not improves and len(inventory) >= 3: # an old pair would spoil purification, so discard it
+                    if first_fidelity <= second_fidelity:
+                        sim.discard(fast_link, 0)
+                    else:
+                        sim.discard(fast_link, 1)
+                else:
+                    break
 
 
 def make_policy(params):
