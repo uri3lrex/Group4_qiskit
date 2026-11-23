@@ -5,6 +5,8 @@ Drive the provided harness (qnetsim.py) to implement the three graded
 entry points. Signatures are normative; the autograder imports them.
 
 Only numpy + standard library + qnetsim may be used.
+
+Used AI-assistant: run_variant_scenario was written with help from Chatgpt and reviewed by Group 4.
 """
 import math
 

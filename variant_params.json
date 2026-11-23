@@ -2,8 +2,8 @@
   "variant_id": 4,
   "group": "4",
   "physics": {
-    "f_link": 0.8709,
-    "f_swap": 0.9762,
+    "f_link": 0.8709, 
+    "f_swap": 0.9762, 
     "t2_ms": 238.1,
     "q_swap": 0.887,
     "purification_allowed": true

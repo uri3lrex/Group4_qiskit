@@ -11,6 +11,8 @@ Design space (see spec section 3.2):
     second pair is available on the same link;
   * hold vs swap rules (e.g., wait for a purified partner);
   * discard pairs whose current fidelity has fallen below a floor.
+
+Used AI-assistant to improve the code and debugging the code was done with the help of Chatgpt and reviewed by Group 4.
 """
 
 import math
