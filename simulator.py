@@ -225,11 +225,31 @@ def run_variant_scenario(params, sim_time_ms, seed, policy) -> dict:
     )
 
     # calculate rate, mean fidelity, p95 latency, pairs consumed per delivery
-    delivered_count = len(served_fidelities)
+    # Calculate rate, mean fidelity, p95 latency,
+    # and pairs consumed per delivery
+
+    delivered_count = len(simulator.delivered)
+
     rate = delivered_count / (sim_time_ms / 1000.0)
-    mean_fidelity = (float(np.mean(served_fidelities)) if served_fidelities else 0.0)
-    p95_latency = (float(np.percentile(latencies, 95))if latencies else 0.0)
-    pairs_consumed_per_delivery = (simulator.state.stats["generated"] / max(1, delivered_count))
+
+    mean_fidelity = (
+        float(np.mean([p.fidelity for p in simulator.delivered]))
+        if simulator.delivered else 0.0
+    )
+
+    p95_latency = (
+        float(np.percentile(latencies, 95))
+        if latencies else 0.0
+    )
+
+    pairs_consumed_per_delivery = (
+        simulator.state.stats["generated"] / max(1, delivered_count)
+    )
+    #delivered_count = len(served_fidelities)
+    #rate = simulator.delivered / (sim_time_ms / 1000.0)
+    #mean_fidelity = (float(np.mean(served_fidelities)) if served_fidelities else 0.0)
+    #p95_latency = (float(np.percentile(latencies, 95))if latencies else 0.0)
+    #pairs_consumed_per_delivery = (simulator.state.stats["generated"] / max(1, delivered_count))
 
     #print(    f"Requests served: {len(served_fidelities)} | "    f"Requests waiting: {len(unserved_request)} | "    f"Buffered pairs: {len(end_to_end_buffer)}")
 
